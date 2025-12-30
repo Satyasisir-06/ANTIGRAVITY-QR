@@ -1,4 +1,7 @@
 let timerInterval;
+const activeQRTimers = {};
+const activeClassTimers = {};
+let serverClockOffset = 0; // Global offset set from admin.html
 
 async function generateQR() {
     const subject = document.getElementById('subject').value;
@@ -164,8 +167,6 @@ async function deleteSubject(id) {
 // Dark Mode Logic
 // --- Session Configuration ---
 // --- Session Configuration (Multi-Session Support) ---
-let activeClassTimers = {};
-let activeQRTimers = {};
 
 function toggleSessionForm() {
     const form = document.getElementById('start-session-form');
@@ -278,7 +279,8 @@ function startClassTimer(sessionId, endTimeStr, subjectName = "Session") {
     if (!display) return;
 
     activeClassTimers[sessionId] = setInterval(() => {
-        const diff = endDate - new Date();
+        const adjustedNow = new Date(Date.now() + serverClockOffset);
+        const diff = endDate - adjustedNow;
 
         if (diff <= 0) {
             clearInterval(activeClassTimers[sessionId]);

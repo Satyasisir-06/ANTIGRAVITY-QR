@@ -918,7 +918,7 @@ def mark_session_attendance():
     # This prevents multiple scans for the same subject even in different sessions
     existing = conn.execute('''
         SELECT id FROM attendance 
-        WHERE roll = ? AND date = ? AND subject = ? AND branch = ?
+        WHERE LOWER(roll) = LOWER(?) AND date = ? AND LOWER(subject) = LOWER(?) AND LOWER(branch) = LOWER(?)
     ''', (roll, session_data['date'], session_data['subject'], session_data['branch'])).fetchone()
     
     if existing:
