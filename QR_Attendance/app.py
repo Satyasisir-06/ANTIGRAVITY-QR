@@ -10,6 +10,7 @@ except ImportError:
 # Common Integrity Error tuple for catching
 DB_INTEGRITY_ERRORS = (sqlite3.IntegrityError, PostgresIntegrityError) if PostgresIntegrityError else (sqlite3.IntegrityError,)
 
+import qrcode
 import io
 import base64
 import time
@@ -498,7 +499,8 @@ def admin_dashboard():
                            mech_count=mech_count,
                            civil_count=civil_count,
                            subjects=subjects,
-                           active_sessions=active_sessions)
+                           active_sessions=active_sessions,
+                           server_now=datetime.now().timestamp())
 
 @app.route('/api/stats')
 def api_stats():
@@ -814,7 +816,8 @@ def start_session():
         'session_id': session_id,
         'end_time': end_time,
         'token': token,
-        'qr_url': qr_url
+        'qr_url': qr_url,
+        'server_now': datetime.now().timestamp()
     })
 
 @app.route('/get_qr_img/<token>')

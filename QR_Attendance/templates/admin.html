@@ -295,26 +295,34 @@
         }
     </script>
 
-    <!-- Session Data for JS -->
     <script id="active-sessions-data" type="application/json">
-        [
-        {% for s in active_sessions %}
-        {"id": {{ s.id }}, "subject": "{{ s.subject }}", "end_time": "{{ s.end_time }}", "date": "{{ s.date }}", "start_time": "{{ s.start_time }}" }{% if not loop.last %},{% endif %}
-        {% endfor %}
-        ]
+        {
+            "server_now": {{ server_now }},
+            "sessions": [
+                {% for s in active_sessions %}
+                {"id": {{ s.id }}, "subject": "{{ s.subject }}", "end_time": "{{ s.end_time }}", "date": "{{ s.date }}", "start_time": "{{ s.start_time }}" }{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ]
+        }
     </script>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const sessionData = JSON.parse(document.getElementById('active-sessions-data').textContent);
+            const dataWrap = JSON.parse(document.getElementById('active-sessions-data').textContent);
+            const sessions = dataWrap.sessions;
+            const serverNow = dataWrap.server_now * 1000;
+            const localArrival = Date.now();
+            const serverClockOffset = serverNow - localArrival;
 
-            sessionData.forEach(s => {
+            sessions.forEach(s => {
                 startClassTimer(s.id, s.end_time, s.subject);
 
                 const startTimeStr = `${s.date} ${s.start_time}`;
                 const startDt = new Date(startTimeStr.replace(/-/g, '/'));
-                const now = new Date();
-                const diffSec = Math.floor((now - startDt) / 1000);
+
+                // Adjust current time for server offset
+                const adjustedNow = Date.now() + serverClockOffset;
+                const diffSec = Math.floor((adjustedNow - startDt) / 1000);
                 const remaining = 120 - diffSec;
 
                 if (remaining > 0) {
