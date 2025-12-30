@@ -1317,7 +1317,8 @@ def update_semester():
     end_date = request.form['end_date']
     
     # Geofencing Config
-    geo_enabled = True if 'geo_enabled' in request.form else False
+    # Explicitly cast to integer for PostgreSQL/SQLite compatibility
+    geo_enabled = 1 if 'geo_enabled' in request.form else 0
     college_lat = request.form.get('college_lat')
     college_lng = request.form.get('college_lng')
     geo_radius = request.form.get('geo_radius', 200)
