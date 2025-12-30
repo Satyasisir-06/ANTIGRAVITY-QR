@@ -54,13 +54,53 @@ def haversine(lat1, lon1, lat2, lon2):
     d = R * c
     return d
 
-class PostgresRow(dict):
-    """Simple wrapper to allow row['col'] and row.col (some flask code likes .col)"""
+class DBRow:
+    """A row object that allows access by index and name, like sqlite3.Row"""
+    def __init__(self, data, description):
+        self.data = data
+        self.description = description
+        self._mapping = {d[0]: i for i, d in enumerate(description)}
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self.data[key]
+        return self.data[self._mapping[key]]
+
+    def keys(self):
+        return [d[0] for d in self.description]
+
     def __getattr__(self, name):
-        try:
-            return self[name]
-        except KeyError:
-            raise AttributeError(name)
+        if name in self._mapping:
+            return self.data[self._mapping[name]]
+        raise AttributeError(name)
+
+class DBResult:
+    def __init__(self, cursor, is_postgres):
+        self.cursor = cursor
+        self.is_postgres = is_postgres
+
+    def fetchone(self):
+        row = self.cursor.fetchone()
+        if self.is_postgres and row is not None:
+            return DBRow(list(row), self.cursor.description)
+        return row
+
+    def fetchall(self):
+        rows = self.cursor.fetchall()
+        if self.is_postgres:
+            return [DBRow(list(row), self.cursor.description) for row in rows]
+        return rows
+
+    def __iter__(self):
+        if self.is_postgres:
+            for row in self.cursor:
+                yield DBRow(list(row), self.cursor.description)
+        else:
+            for row in self.cursor:
+                yield row
+
+    def rowcount(self):
+        return self.cursor.rowcount
 
 class DBWrapper:
     def __init__(self, conn, is_postgres):
@@ -72,9 +112,10 @@ class DBWrapper:
             query = query.replace('?', '%s')
             cur = self.conn.cursor()
             cur.execute(query, args)
-            return cur
+            return DBResult(cur, True)
         else:
-            return self.conn.execute(query, args)
+            res = self.conn.execute(query, args)
+            return DBResult(res, False)
 
     def cursor(self):
         if self.is_postgres:
@@ -87,19 +128,16 @@ class DBWrapper:
             query = query.replace('?', '%s')
             cur = self.conn.cursor()
             cur.executemany(query, args_list)
-            return cur
+            return DBResult(cur, True)
         else:
-            return self.conn.executemany(query, args_list)
+            res = self.conn.executemany(query, args_list)
+            return DBResult(res, False)
 
     def commit(self):
         self.conn.commit()
 
     def close(self):
         self.conn.close()
-
-    def fetchone(self, cur=None):
-        # sqlite cursor has fetchone, postgres cur does too
-        return cur.fetchone()
 
 def get_db_connection():
     db_url = os.environ.get('DATABASE_URL')
@@ -110,8 +148,8 @@ def get_db_connection():
             
         try:
             import psycopg2
-            from psycopg2.extras import RealDictCursor
-            conn = psycopg2.connect(db_url, sslmode='require', cursor_factory=RealDictCursor)
+            # Use standard cursor (returns tuples) so our DBRow can index it easily
+            conn = psycopg2.connect(db_url, sslmode='require')
             return DBWrapper(conn, True)
         except Exception as e:
             print(f"[ERROR] Failed to connect to Supabase: {e}")
