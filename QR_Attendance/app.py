@@ -23,8 +23,15 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sms_utils import SMSHandler
 
 app = Flask(__name__)
-app.secret_key = 'super_secret_key_for_qr_attendance_system'  # Change this for production
-socketio = SocketIO(app, cors_allowed_origins="*")
+app.secret_key = os.environ.get('SECRET_KEY', 'super_secret_key_for_qr_attendance_system')
+
+# Vercel/Serverless configuration for SocketIO
+is_vercel = 'VERCEL' in os.environ
+if is_vercel:
+    print("[INIT] Running on Vercel mode. Forcing threading mode.")
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+else:
+    socketio = SocketIO(app, cors_allowed_origins="*")
 
 # SMTP CONFIGURATION
 SMTP_SERVER = "smtp.gmail.com"
@@ -95,10 +102,18 @@ class DBWrapper:
 def get_db_connection():
     db_url = os.environ.get('DATABASE_URL')
     if db_url:
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-        conn = psycopg2.connect(db_url, sslmode='require', cursor_factory=RealDictCursor)
-        return DBWrapper(conn, True)
+        # Compatibility fix: Some platforms use 'postgres://', but psycopg2 needs 'postgresql://'
+        if db_url.startswith("postgres://"):
+            db_url = db_url.replace("postgres://", "postgresql://", 1)
+            
+        try:
+            import psycopg2
+            from psycopg2.extras import RealDictCursor
+            conn = psycopg2.connect(db_url, sslmode='require', cursor_factory=RealDictCursor)
+            return DBWrapper(conn, True)
+        except Exception as e:
+            print(f"[ERROR] Failed to connect to Supabase: {e}")
+            raise e
     else:
         conn = sqlite3.connect(DB_NAME)
         conn.row_factory = sqlite3.Row
@@ -302,7 +317,11 @@ def init_db():
     conn.close()
 
 # Initialize DB on start
-init_db()
+try:
+    init_db()
+except Exception as e:
+    print(f"[CRITICAL] Database Initialization Failed: {e}")
+    # Don't crash the whole app, let it show an error page later
 
 @app.route('/')
 def index():
