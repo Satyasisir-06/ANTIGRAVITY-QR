@@ -306,39 +306,40 @@
         }
     </script>
 
-    document.addEventListener('DOMContentLoaded', () => {
-    const dataWrap = JSON.parse(document.getElementById('active-sessions-data').textContent);
-    const sessions = dataWrap.sessions;
-    const serverNow = dataWrap.server_now * 1000;
-    const localArrival = Date.now();
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dataWrap = JSON.parse(document.getElementById('active-sessions-data').textContent);
+            const sessions = dataWrap.sessions;
+            const serverNow = dataWrap.server_now * 1000;
+            const localArrival = Date.now();
 
-    // Set the global offset defined in backjs.js
-    window.serverClockOffset = serverNow - localArrival;
+            // Set the global offset defined in backjs.js
+            window.serverClockOffset = serverNow - localArrival;
 
-    sessions.forEach(s => {
-    startClassTimer(s.id, s.end_time, s.subject);
+            sessions.forEach(s => {
+                startClassTimer(s.id, s.end_time, s.subject);
 
-    const startTimeStr = `${s.date} ${s.start_time}`;
-    const startDt = new Date(startTimeStr.replace(/-/g, '/'));
+                const startTimeStr = `${s.date} ${s.start_time}`;
+                const startDt = new Date(startTimeStr.replace(/-/g, '/'));
 
-    // Adjust current time for server offset
-    const adjustedNow = Date.now() + serverClockOffset;
-    const diffSec = Math.floor((adjustedNow - startDt) / 1000);
-    const remaining = 120 - diffSec;
+                // Adjust current time for server offset
+                const adjustedNow = Date.now() + serverClockOffset;
+                const diffSec = Math.floor((adjustedNow - startDt) / 1000);
+                const remaining = 120 - diffSec;
 
-    if (remaining > 0) {
-    startQRTimer(s.id, remaining);
-    } else {
-    const qrTimerDisplay = document.getElementById(`qr-timer-${s.id}`);
-    const qrImg = document.getElementById(`qr-image-${s.id}`);
-    if (qrTimerDisplay) {
-    qrTimerDisplay.textContent = "EXPIRED";
-    qrTimerDisplay.style.color = "red";
-    }
-    if (qrImg) qrImg.style.opacity = "0.2";
-    }
-    });
-    });
+                if (remaining > 0) {
+                    startQRTimer(s.id, remaining);
+                } else {
+                    const qrTimerDisplay = document.getElementById(`qr-timer-${s.id}`);
+                    const qrImg = document.getElementById(`qr-image-${s.id}`);
+                    if (qrTimerDisplay) {
+                        qrTimerDisplay.textContent = "EXPIRED";
+                        qrTimerDisplay.style.color = "red";
+                    }
+                    if (qrImg) qrImg.style.opacity = "0.2";
+                }
+            });
+        });
     </script>
 </body>
 

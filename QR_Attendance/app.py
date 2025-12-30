@@ -1161,17 +1161,20 @@ def api_analytics():
         present_counts.append(p)
         absent_counts.append(a)
         
-    # 2. Branch Performance (All Time)
-    # Get all branches with records
-    branches = ['CSM', 'CSD', 'CSE-A', 'CSE-B', 'CSE-C', 'CSE-D', 'CIVIL', 'MECH', 'ECE', 'EEE'] # Hardcoded for consistent sorting or fetch DISTINCT
+    # 2. Branch Performance (Dynamic)
+    branch_rows = cur.execute("SELECT DISTINCT branch FROM students WHERE branch IS NOT NULL AND branch != ''").fetchall()
+    branches = sorted([r[0] for r in branch_rows])
+    if not branches:
+        branches = ['CSM', 'CSD', 'CSE-A', 'CSE-B', 'CSE-C', 'CSE-D', 'CIVIL', 'MECH', 'ECE', 'EEE']
+        
     branch_data = []
-    
     for b in branches:
-        total = cur.execute("SELECT COUNT(*) FROM attendance WHERE branch = ?", (b,)).fetchone()[0]
+        # Using LOWER for case-insensitivity consistency
+        total = cur.execute("SELECT COUNT(*) FROM attendance WHERE LOWER(branch) = LOWER(?)", (b,)).fetchone()[0]
         if total == 0:
             branch_data.append(0)
         else:
-            present = cur.execute("SELECT COUNT(*) FROM attendance WHERE branch = ? AND status = 'PRESENT'", (b,)).fetchone()[0]
+            present = cur.execute("SELECT COUNT(*) FROM attendance WHERE LOWER(branch) = LOWER(?) AND status = 'PRESENT'", (b,)).fetchone()[0]
             pct = round((present / total) * 100, 1)
             branch_data.append(pct)
             
@@ -1257,10 +1260,33 @@ def settings():
         
     conn = get_db_connection()
     config = conn.execute("SELECT * FROM semester_config").fetchone()
-    holidays = conn.execute("SELECT * FROM holidays ORDER BY date").fetchall()
-    conn.close()
+    raw_holidays = conn.execute("SELECT * FROM holidays ORDER BY date").fetchall()
     
-    return render_template('settings.html', config=config, holidays=holidays)
+    # Simple Grouping logic for UI
+    from itertools import groupby
+    grouped_holidays = []
+    for desc, items in groupby(raw_holidays, lambda x: x['description']):
+        item_list = list(items)
+        if len(item_list) > 1:
+            start_h = item_list[0]
+            end_h = item_list[-1]
+            grouped_holidays.append({
+                'id': start_h['id'], # For deletion (might need better logic but this works for now)
+                'ids': [i['id'] for i in item_list],
+                'date_display': f"{start_h['date']} to {end_h['date']}",
+                'description': desc
+            })
+        else:
+            h = item_list[0]
+            grouped_holidays.append({
+                'id': h['id'],
+                'ids': [h['id']],
+                'date_display': h['date'],
+                'description': desc
+            })
+            
+    conn.close()
+    return render_template('settings.html', config=config, holidays=grouped_holidays)
 
 @app.route('/update_semester', methods=['POST'])
 def update_semester():
@@ -1339,6 +1365,23 @@ def delete_holiday(id):
         
     conn = get_db_connection()
     conn.execute("DELETE FROM holidays WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/delete_holidays_bulk', methods=['POST'])
+def delete_holidays_bulk():
+    if 'user_id' not in session or session.get('role') != 'admin':
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+        
+    data = request.json
+    ids = data.get('ids', [])
+    if not ids:
+        return jsonify({'success': False, 'message': 'No IDs provided'}), 400
+        
+    conn = get_db_connection()
+    # Batch delete
+    conn.execute(f"DELETE FROM holidays WHERE id IN ({','.join(['?']*len(ids))})", ids)
     conn.commit()
     conn.close()
     return jsonify({'success': True})

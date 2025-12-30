@@ -444,15 +444,20 @@ setInterval(updateDashboardStats, 3000);
 
 async function addHoliday() {
     const date = document.getElementById('h_date').value;
+    const endDate = document.getElementById('h_end_date').value;
     const desc = document.getElementById('h_desc').value;
 
-    if (!date) return alert("Select a start date");
+    if (!date || !desc) return alert("Start Date and Occasion are required");
 
     try {
         const res = await fetch('/add_holiday', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ date, description: desc })
+            body: JSON.stringify({
+                date: date,
+                end_date: endDate,
+                description: desc
+            })
         });
         const data = await res.json();
         if (data.success) {
@@ -465,15 +470,21 @@ async function addHoliday() {
     }
 }
 
+async function deleteHoliday(ids) {
+    if (!confirm('Remove this holiday/range?')) return;
 
+    // Ensure ids is an array
+    const idList = Array.isArray(ids) ? ids : [ids];
 
-async function deleteHoliday(id) {
-    if (!confirm('Remove this holiday?')) return;
     try {
-        const res = await fetch('/delete_holiday/' + id, { method: 'POST' });
+        const res = await fetch('/delete_holidays_bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: idList })
+        });
         const data = await res.json();
         if (data.success) {
-            document.getElementById('holiday-' + id).remove();
+            location.reload(); // Easier than manual DOM removal for ranges
         }
     } catch (e) {
         alert("Error deleting holiday");
