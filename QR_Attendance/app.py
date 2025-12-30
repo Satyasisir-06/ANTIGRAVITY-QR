@@ -1348,7 +1348,8 @@ def update_sms_config():
     if 'user_id' not in session or session.get('role') != 'admin':
         return redirect(url_for('login'))
         
-    sms_enabled = True if 'sms_enabled' in request.form else False
+    # Explicitly cast to integer (1/0) for PostgreSQL compatibility
+    sms_enabled = 1 if 'sms_enabled' in request.form else 0
     sms_sid = request.form.get('sms_sid', '').strip()
     sms_auth_token = request.form.get('sms_auth_token', '').strip()
     sms_from_number = request.form.get('sms_from_number', '').strip()
