@@ -113,6 +113,12 @@ class DBResult:
             for row in self.cursor:
                 yield row
 
+    @property
+    def lastrowid(self):
+        if hasattr(self.cursor, 'lastrowid'):
+            return self.cursor.lastrowid
+        return None
+
     def rowcount(self):
         return self.cursor.rowcount
 
@@ -788,20 +794,9 @@ def start_session():
     conn.close()
 
     # QR Data: URL for scanning
-    def get_local_ip():
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-            s.close()
-            return ip
-        except Exception:
-            return "127.0.0.1"
-
-    local_ip = get_local_ip()
-    port = request.host.split(':')[-1] if ':' in request.host else '5000'
-    host_url = f"http://{local_ip}:{port}"
-    qr_url = f"{host_url}/scan_session?token={token}"
+    # Use public host URL instead of local IP for production
+    base_url = request.host_url.rstrip('/')
+    qr_url = f"{base_url}/scan_session?token={token}"
     
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(qr_url)
@@ -824,20 +819,9 @@ def start_session():
 
 @app.route('/get_qr_img/<token>')
 def get_qr_img(token):
-    def get_local_ip():
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-            s.close()
-            return ip
-        except Exception:
-            return "127.0.0.1"
-
-    local_ip = get_local_ip()
-    port = request.host.split(':')[-1] if ':' in request.host else '5000'
-    host_url = f"http://{local_ip}:{port}"
-    qr_url = f"{host_url}/scan_session?token={token}"
+    # Use public host URL for production
+    base_url = request.host_url.rstrip('/')
+    qr_url = f"{base_url}/scan_session?token={token}"
     
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(qr_url)
