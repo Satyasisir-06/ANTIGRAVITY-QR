@@ -193,7 +193,7 @@ def init_db():
             if config == 0:
                 start = datetime.now().replace(month=1, day=1).strftime("%Y-%m-%d")
                 end = datetime.now().replace(month=12, day=31).strftime("%Y-%m-%d")
-                conn.execute("INSERT INTO semester_config (start_date, end_date, geo_enabled, geo_radius) VALUES (?, ?, 0, 200)", (start, end))
+                conn.execute("INSERT INTO semester_config (start_date, end_date, geo_enabled, geo_radius) VALUES (?, ?, ?, ?)", (start, end, False, 200))
                 conn.commit()
                 
         except Exception as e:
@@ -481,7 +481,7 @@ def admin_dashboard():
     subjects = conn.execute('SELECT * FROM subjects ORDER BY name').fetchall()
     
     # Fetch Active Sessions
-    active_sessions = conn.execute("SELECT * FROM sessions WHERE is_finalized = 0").fetchall()
+    active_sessions = conn.execute("SELECT * FROM sessions WHERE is_finalized = ?", (False,)).fetchall()
     
     conn.close()
     
@@ -947,7 +947,7 @@ def mark_session_attendance():
                         (roll, name, session_data['subject'], session_data['branch'], 
                          session_data['date'], now_time, session_data['id']))
         conn.commit()
-    except sqlite3.IntegrityError:
+    except DB_INTEGRITY_ERRORS:
         conn.close()
         return jsonify({'success': False, 'message': 'Attendance already marked for this subject today!'})
     conn.close()
@@ -1284,7 +1284,7 @@ def update_semester():
     end_date = request.form['end_date']
     
     # Geofencing Config
-    geo_enabled = 1 if 'geo_enabled' in request.form else 0
+    geo_enabled = True if 'geo_enabled' in request.form else False
     college_lat = request.form.get('college_lat')
     college_lng = request.form.get('college_lng')
     geo_radius = request.form.get('geo_radius', 200)
@@ -1306,7 +1306,7 @@ def update_sms_config():
     if 'user_id' not in session or session.get('role') != 'admin':
         return redirect(url_for('login'))
         
-    sms_enabled = 1 if 'sms_enabled' in request.form else 0
+    sms_enabled = True if 'sms_enabled' in request.form else False
     sms_sid = request.form.get('sms_sid', '').strip()
     sms_auth_token = request.form.get('sms_auth_token', '').strip()
     sms_from_number = request.form.get('sms_from_number', '').strip()
@@ -1732,7 +1732,7 @@ def finalize_session_logic(session_id):
             print(f"[DEBUG] Inserted {len(absent_data)} absent records into database.")
                                 
         # 5. Mark Session Finalized
-        conn.execute("UPDATE sessions SET is_finalized = 1 WHERE id = ?", (session_id,))
+        conn.execute("UPDATE sessions SET is_finalized = ? WHERE id = ?", (True, session_id))
         
         # 6. Trigger SMS Alerts if enabled
         config = conn.execute("SELECT * FROM semester_config LIMIT 1").fetchone()
@@ -1747,8 +1747,8 @@ def finalize_session_logic(session_id):
                     phone = student['parent_phone']
                     
                     # 7. Calculate Current Attendance Percentage for Warning
-                    total_sessions = conn.execute("SELECT COUNT(*) FROM sessions WHERE subject = ? AND branch = ? AND is_finalized = 1", 
-                                                 (subject, branch)).fetchone()[0]
+                    total_sessions = conn.execute("SELECT COUNT(*) FROM sessions WHERE subject = ? AND branch = ? AND is_finalized = ?", 
+                                                 (subject, branch, True)).fetchone()[0]
                     present_count = conn.execute("SELECT COUNT(*) FROM attendance WHERE roll = ? AND subject = ? AND branch = ? AND status = 'PRESENT'", 
                                                 (roll, subject, branch)).fetchone()[0]
                     
@@ -1788,7 +1788,7 @@ def auto_finalizer_thread():
             conn = get_db_connection()
             # Find active sessions that have ended
             # We need to parse date and time to compare
-            active_sessions = conn.execute("SELECT * FROM sessions WHERE is_finalized = 0").fetchall()
+            active_sessions = conn.execute("SELECT * FROM sessions WHERE is_finalized = ?", (False,)).fetchall()
             conn.close()
             
             now = datetime.now()
