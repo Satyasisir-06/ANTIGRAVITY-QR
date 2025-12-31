@@ -657,6 +657,7 @@ def student_dashboard():
                            working_days=working_days, 
                            total_sem_days=total_sem_days,
                            holidays=holidays,
+                           config=config,
                            percentage=round(percentage, 2))
 
 @app.route('/submit_correction', methods=['POST'])
@@ -1332,11 +1333,21 @@ def update_semester():
     geo_radius = request.form.get('geo_radius', 200)
     
     conn = get_db_connection()
-    conn.execute('''UPDATE semester_config 
-                    SET start_date = ?, end_date = ?, 
-                        geo_enabled = ?, college_lat = ?, college_lng = ?, geo_radius = ?
-                    WHERE id = 1''', 
-                 (start_date, end_date, geo_enabled, college_lat, college_lng, geo_radius))
+    # Check if a row exists, if not insert (Edge case handling)
+    row = conn.execute("SELECT id FROM semester_config LIMIT 1").fetchone()
+    if not row:
+         # Should not happen given init_db, but safe to handle
+         conn.execute('''INSERT INTO semester_config (start_date, end_date, geo_enabled, college_lat, college_lng, geo_radius) 
+                         VALUES (?, ?, ?, ?, ?, ?)''',
+                         (start_date, end_date, geo_enabled, college_lat, college_lng, geo_radius))
+    else:
+        # Update the existing row (regardless of ID)
+        cfg_id = row['id'] if hasattr(row, 'id') else row[0]
+        conn.execute('''UPDATE semester_config 
+                        SET start_date = ?, end_date = ?, 
+                            geo_enabled = ?, college_lat = ?, college_lng = ?, geo_radius = ?
+                        WHERE id = ?''', 
+                     (start_date, end_date, geo_enabled, college_lat, college_lng, geo_radius, cfg_id))
     conn.commit()
     conn.close()
     
