@@ -1536,7 +1536,17 @@ def upload_students():
                      branch = row[2].strip()
                      p_phone = row[3].strip() if len(row) > 3 else None
                      
-                     conn.execute("REPLACE INTO students (roll, name, branch, parent_email, parent_phone) VALUES (?, ?, ?, ?, ?)", (roll, name, branch, None, p_phone))
+                     if conn.is_postgres:
+                         conn.execute("""
+                            INSERT INTO students (roll, name, branch, parent_email, parent_phone) VALUES (?, ?, ?, ?, ?)
+                            ON CONFLICT(roll) DO UPDATE SET
+                            name=EXCLUDED.name,
+                            branch=EXCLUDED.branch,
+                            parent_email=EXCLUDED.parent_email,
+                            parent_phone=EXCLUDED.parent_phone
+                         """, (roll, name, branch, None, p_phone))
+                     else:
+                         conn.execute("REPLACE INTO students (roll, name, branch, parent_email, parent_phone) VALUES (?, ?, ?, ?, ?)", (roll, name, branch, None, p_phone))
                      count += 1
             
             conn.commit()
@@ -1569,8 +1579,17 @@ def add_student_manual():
     try:
         print(f"DEBUG: Executing REPLACE for {roll} with phone {p_phone}", flush=True)
         # Use INSERT OR REPLACE to ensure upsert behavior
-        conn.execute("INSERT OR REPLACE INTO students (roll, name, branch, parent_phone) VALUES (?, ?, ?, ?)", 
-                     (roll, name, branch, p_phone))
+        if conn.is_postgres:
+            conn.execute("""
+                INSERT INTO students (roll, name, branch, parent_phone) VALUES (?, ?, ?, ?)
+                ON CONFLICT(roll) DO UPDATE SET
+                name=EXCLUDED.name,
+                branch=EXCLUDED.branch,
+                parent_phone=EXCLUDED.parent_phone
+            """, (roll, name, branch, p_phone))
+        else:
+            conn.execute("INSERT OR REPLACE INTO students (roll, name, branch, parent_phone) VALUES (?, ?, ?, ?)", 
+                         (roll, name, branch, p_phone))
         conn.commit()
         print("DEBUG: Commit successful", flush=True)
         success = True
