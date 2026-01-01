@@ -637,7 +637,9 @@ body.dark-mode .session-card {
     background: var(--qr-bg) !important;
     padding: 10px;
     border-radius: 10px;
-/* Toggle Switch */
+    border: 1px solid var(--border-color);
+}
+
 .toggle-wrapper {
     display: flex;
     align-items: center;
@@ -691,18 +693,18 @@ body.dark-mode .toggle-wrapper {
     -webkit-transition: .4s;
     transition: .4s;
     border-radius: 50%;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
-input:checked + .slider {
+input:checked+.slider {
     background: linear-gradient(to right, #a18cd1, #fbc2eb);
 }
 
-input:focus + .slider {
+input:focus+.slider {
     box-shadow: 0 0 1px #a18cd1;
 }
 
-input:checked + .slider:before {
+input:checked+.slider:before {
     -webkit-transform: translateX(24px);
     -ms-transform: translateX(24px);
     transform: translateX(24px);
