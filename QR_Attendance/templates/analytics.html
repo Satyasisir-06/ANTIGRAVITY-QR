@@ -26,15 +26,21 @@
         <div style="margin-top: 2rem;">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                 <!-- Trend Chart -->
-                <div class="card" style="background: rgba(255,255,255,0.8); padding: 20px; border-radius: 15px;">
+                <div class="card"
+                    style="background: rgba(255,255,255,0.8); padding: 20px; border-radius: 15px; min-height: 400px; display: flex; flex-direction: column;">
                     <h3 style="text-align: center; margin-bottom: 20px;">Attendance Trends (Last 7 Days)</h3>
-                    <canvas id="trendChart"></canvas>
+                    <div style="flex-grow: 1; position: relative;">
+                        <canvas id="trendChart"></canvas>
+                    </div>
                 </div>
 
                 <!-- Branch Chart -->
-                <div class="card" style="background: rgba(255,255,255,0.8); padding: 20px; border-radius: 15px;">
+                <div class="card"
+                    style="background: rgba(255,255,255,0.8); padding: 20px; border-radius: 15px; min-height: 400px; display: flex; flex-direction: column;">
                     <h3 style="text-align: center; margin-bottom: 20px;">Branch Performance (%)</h3>
-                    <canvas id="branchChart"></canvas>
+                    <div style="flex-grow: 1; position: relative;">
+                        <canvas id="branchChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -75,6 +81,7 @@
                     },
                     options: {
                         responsive: true,
+                        maintainAspectRatio: false,
                         plugins: {
                             legend: { position: 'top' }
                         }
@@ -100,6 +107,7 @@
                     },
                     options: {
                         responsive: true,
+                        maintainAspectRatio: false,
                         scales: {
                             y: { beginAtZero: true, max: 100 }
                         },
