@@ -1663,7 +1663,8 @@ def notify_absent():
             # We determine subject/threshold context if possible, otherwise generic
             # For manual notification, stick to generic or require context
             now_time = datetime.now().strftime("%I:%M %p")
-            msg = f"[Chaitanya Engineering College] Absent Alert: {s['name']} ({s['roll']}) was absent on {today_str} (Reported: {now_time})."
+            subject_text = f" for '{data.get('subject', 'Classes')}'" 
+            msg = f"[Chaitanya Engineering College] Absent Alert: {s['name']} ({s['roll']}) was absent{subject_text} on {today_str} (Reported: {now_time})."
             
             success, status = sms_handler.send_sms(phone, msg)
             if success:

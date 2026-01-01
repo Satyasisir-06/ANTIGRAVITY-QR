@@ -212,11 +212,14 @@
         async function notifyAbsent(type, value, btn) {
             if (!confirm(`Send absentee notification (${type === 'branch' ? 'ALL' : 'SINGLE'})?`)) return;
 
+            // Ask for Subject Name (Optional)
+            const subject = prompt("Enter Subject Name (e.g., DBMS, Java) or leave empty for generic 'Classes':", "");
+
             const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
             btn.disabled = true;
 
-            let payload = { target: type };
+            let payload = { target: type, subject: subject || 'Classes' };
             if (type === 'single') payload.roll = value;
             if (type === 'branch') payload.branch = value;
 
