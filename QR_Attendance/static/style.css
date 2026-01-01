@@ -774,3 +774,23 @@ body.dark-mode .segmented-control label:has(input:checked) {
         /* Align with slider */
     }
 }
+
+/* Active Session Card Layout Mobile Fix */
+.session-card-content {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 15px;
+}
+
+@media (max-width: 480px) {
+    .session-card-content {
+        grid-template-columns: 1fr;
+        /* Stack vertically on small screens */
+    }
+
+    .qr-container {
+        max-width: 180px;
+        /* Limit QR size when stacked */
+        margin: 0 auto;
+    }
+}
