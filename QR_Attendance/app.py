@@ -1082,9 +1082,15 @@ def reports_page():
     if 'user_id' not in session or session.get('role') != 'admin':
         return redirect(url_for('login'))
     
-    reports_dir = os.path.join('static', 'reports')
+    # Use /tmp for serverless to avoid Read-only error
+    is_serverless = os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME')
+    reports_dir = '/tmp' if is_serverless else os.path.join('static', 'reports')
+    
     if not os.path.exists(reports_dir):
-        os.makedirs(reports_dir)
+        try:
+            os.makedirs(reports_dir)
+        except OSError:
+            pass # Ignore if we can't create it (e.g. read-only root), though /tmp should work
         
     reports = []
     for f in os.listdir(reports_dir):
@@ -1113,10 +1119,15 @@ def generate_weekly_report():
     end_str = end_date.strftime("%Y-%m-%d")
     
     filename = f"Weekly_Report_{start_str}_to_{end_str}.csv"
-    filepath = os.path.join('static', 'reports', filename)
+    # Use /tmp for Vercel/Serverless environments
+    reports_dir = '/tmp' if os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME') else os.path.join('static', 'reports')
     
-    # Ensure directory exists
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    filename = f"Weekly_Report_{start_str}_to_{end_str}.csv"
+    filepath = os.path.join(reports_dir, filename)
+    
+    # Ensure directory exists (if not /tmp which always exists)
+    if reports_dir != '/tmp':
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
     
     # Fetch Data: Branch-wise summary
     branches = ['CSM', 'CSD', 'CSE-A', 'CSE-B', 'CSE-C', 'CSE-D', 'CIVIL', 'MECH', 'ECE', 'EEE']
