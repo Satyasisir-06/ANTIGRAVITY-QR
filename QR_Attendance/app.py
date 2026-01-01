@@ -610,6 +610,7 @@ def student_dashboard():
         return redirect(url_for('login'))
     
     username = session['username']
+    conn = get_db_connection()
     # Fetch Semester Config first to filter attendance by date
     config = conn.execute("SELECT * FROM semester_config").fetchone()
     holidays = conn.execute("SELECT * FROM holidays").fetchall()
