@@ -116,7 +116,7 @@
                 <summary
                     style="cursor: pointer; font-weight: 600; color: var(--danger-color); display: flex; justify-content: space-between; align-items: center;">
                     <span>View Absent Students List ({{ absentees|length }})</span>
-                    <button onclick="notifyAbsent('branch', '{{ selected_branch }}')" class="danger"
+                    <button onclick="notifyAbsent('branch', '{{ selected_branch }}', this)" class="danger"
                         style="width: auto; padding: 5px 15px; font-size: 0.9rem;">
                         <i class="fas fa-bell"></i> Notify All Parents
                     </button>
@@ -142,7 +142,7 @@
                                         style="color: grey; font-style: italic;">Not Added</span>{% endif %}
                                 </td>
                                 <td style="padding: 8px;">
-                                    <button onclick="notifyAbsent('single', '{{ s.roll }}')"
+                                    <button onclick="notifyAbsent('single', '{{ s.roll }}', this)"
                                         style="width: auto; padding: 4px 10px; font-size: 0.8rem; background: var(--text-color); color: var(--glass-bg);">
                                         Notify
                                     </button>
@@ -209,8 +209,12 @@
     </div>
     <script src="{{ url_for('static', filename='backjs.js') }}"></script>
     <script>
-        async function notifyAbsent(type, value) {
+        async function notifyAbsent(type, value, btn) {
             if (!confirm(`Send absentee notification (${type === 'branch' ? 'ALL' : 'SINGLE'})?`)) return;
+
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+            btn.disabled = true;
 
             let payload = { target: type };
             if (type === 'single') payload.roll = value;
@@ -227,10 +231,25 @@
                 let msg = `Sent: ${data.sent} / ${data.total}`;
                 if (data.errors.length > 0) {
                     msg += `\nErrors:\n${data.errors.join('\n')}`;
+                    btn.innerHTML = originalText; // Revert if errors (or keep notified if partial success?)
+                    // If at least one sent, we can mark as notified or partial
+                    if (data.sent > 0) {
+                        btn.innerHTML = '<i class="fas fa-check"></i> Notified';
+                        btn.style.background = 'var(--success-color)';
+                        btn.style.color = 'white';
+                    } else {
+                        btn.disabled = false;
+                    }
+                } else {
+                    btn.innerHTML = '<i class="fas fa-check"></i> Notified';
+                    btn.style.background = 'var(--success-color)';
+                    btn.style.color = 'white';
                 }
                 alert(msg);
             } catch (e) {
                 alert('Error sending notifications');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
         }
     </script>
