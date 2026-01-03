@@ -281,7 +281,7 @@ function startClassTimer(sessionId, endTimestamp, subjectName = "Session") {
             clearInterval(activeClassTimers[sessionId]);
             display.textContent = "00:00:00";
             // Check if we should auto-finalize or just alert
-            alert(`${subjectName} has ended!`);
+            // Removed blocking alert to allow seamless auto-finalization
             finalizeAttendance(sessionId, true); // true for auto
             return;
         }

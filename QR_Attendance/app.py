@@ -1769,10 +1769,15 @@ def finalize_session_logic(session_id):
     conn = get_db_connection()
     current_session = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
     
-    if not current_session or current_session['is_finalized']:
-        print(f"[DEBUG] Session {session_id} not found or already finalized.")
+    if not current_session:
+        print(f"[DEBUG] Session {session_id} not found.")
         conn.close()
-        return {'success': False, 'message': 'Invalid or Already Finalized'}
+        return {'success': False, 'message': 'Invalid Session'}
+        
+    if current_session['is_finalized']:
+        print(f"[DEBUG] Session {session_id} already finalized.")
+        conn.close()
+        return {'success': True, 'message': 'Session Already Finalized', 'already_done': True}
         
     branch = current_session['branch'].strip().upper()
     
