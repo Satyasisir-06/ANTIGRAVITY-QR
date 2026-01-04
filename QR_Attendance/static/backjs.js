@@ -183,6 +183,7 @@ async function startSession() {
         return;
     }
 
+    console.log("Starting Session:", { subject, branch, classType });
     try {
         const res = await fetch('/start_session', {
             method: 'POST',
@@ -322,6 +323,7 @@ function startQRTimer(sessionId, totalSeconds) {
 }
 
 async function finalizeAttendance(sessionId, auto = false, btnRef = null) {
+    console.log("finalizeAttendance called:", { sessionId, auto });
     if (!sessionId) return;
 
     if (!auto && !confirm("Finalize this session? Unmarked students will be marked ABSENT.")) return;

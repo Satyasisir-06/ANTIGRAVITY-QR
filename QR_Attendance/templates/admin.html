@@ -319,7 +319,8 @@
                 startClassTimer(s.id, s.end_timestamp, s.subject);
 
                 // Adjust current time for server offset
-                const adjustedNow = Date.now() + serverClockOffset;
+                const offset = window.serverClockOffset || 0;
+                const adjustedNow = Date.now() + offset;
                 const startDt = s.start_timestamp * 1000;
 
                 const diffSec = Math.floor((adjustedNow - startDt) / 1000);
