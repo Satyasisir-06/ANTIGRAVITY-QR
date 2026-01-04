@@ -255,7 +255,7 @@ function createSessionCardHtml(s) {
                     <div style="font-size: 0.85rem; color: #666;">
                         <i class="fas fa-qrcode"></i> <a href="/scan_session?token=${s.token}" target="_blank" style="color: var(--primary-color);">Open Scan Link</a>
                     </div>
-                    <button onclick="finalizeAttendance(${s.id})" class="danger" style="width: 100%; padding: 8px; font-size: 0.9rem;">
+                    <button onclick="finalizeAttendance(${s.id}, false, this)" class="danger" style="width: 100%; padding: 8px; font-size: 0.9rem;">
                         <i class="fas fa-flag-checkered"></i> Finalize
                     </button>
                 </div>
@@ -321,14 +321,14 @@ function startQRTimer(sessionId, totalSeconds) {
     }, 1000);
 }
 
-async function finalizeAttendance(sessionId, auto = false) {
+async function finalizeAttendance(sessionId, auto = false, btnRef = null) {
     if (!sessionId) return;
 
     if (!auto && !confirm("Finalize this session? Unmarked students will be marked ABSENT.")) return;
 
-    // Find the button to show loading state
-    let btn = null;
-    if (window.event && window.event.target) {
+    // Use passed button or try to find it (fallback)
+    let btn = btnRef;
+    if (!btn && window.event && window.event.target) {
         btn = window.event.target.closest('button');
     }
 
@@ -346,23 +346,36 @@ async function finalizeAttendance(sessionId, auto = false) {
         });
 
         if (!res.ok) {
-            throw new Error(`Server returned ${res.status}`);
+            throw new Error(`Server status: ${res.status}`);
         }
 
         const data = await res.json();
 
         if (data.success) {
-            if (!auto) alert(data.message);
+            if (!auto) showToast({ name: 'Session Finalized', roll: 'Success', branch: '' });
+
             // Remove card from UI
             const card = document.getElementById(`session-card-${sessionId}`);
-            if (card) card.remove();
-
-            // If grid empty, show no-sessions message
-            const grid = document.getElementById('active-sessions-grid');
-            if (grid && grid.children.length === 0) {
-                grid.innerHTML = '<div id="no-sessions-msg" style="grid-column: 1 / -1; text-align: center; color: #666; padding: 20px;">No active sessions. Start a class to begin.</div>';
+            if (card) {
+                card.style.transition = "all 0.5s ease";
+                card.style.opacity = "0";
+                card.style.transform = "scale(0.9)";
+                setTimeout(() => card.remove(), 500);
             }
+
+            // If grid empty, show no-sessions message (delayed check)
+            setTimeout(() => {
+                const grid = document.getElementById('active-sessions-grid');
+                if (grid && grid.children.length === 0) {
+                    // Check if a message already exists to avoid duplicates
+                    if (!document.getElementById('no-sessions-msg')) {
+                        grid.innerHTML = '<div id="no-sessions-msg" style="grid-column: 1 / -1; text-align: center; color: #666; padding: 20px;">No active sessions. Start a class to begin.</div>';
+                    }
+                }
+            }, 500);
+
         } else {
+            console.error("Finalize Failed:", data.message);
             if (!auto) alert("Error: " + data.message);
             if (btn) {
                 btn.disabled = false;
@@ -370,8 +383,8 @@ async function finalizeAttendance(sessionId, auto = false) {
             }
         }
     } catch (e) {
-        console.error("Finalize Error:", e);
-        if (!auto) alert("Error: " + e.message);
+        console.error("Finalize Network Error:", e);
+        if (!auto) alert("Network Error: " + e.message);
         if (btn) {
             btn.disabled = false;
             btn.innerHTML = originalHtml;
