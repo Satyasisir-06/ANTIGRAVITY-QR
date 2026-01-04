@@ -1784,22 +1784,20 @@ def finalize_session_logic(session_id):
     # 1. Fetch all students in branch
     all_students = conn.execute("SELECT roll FROM students WHERE UPPER(TRIM(branch)) = ?", (branch,)).fetchall()
     all_rolls = {s['roll'] for s in all_students}
+    print(f"[DEBUG] Found {len(all_rolls)} students registered in branch {branch}")
     
     # 2. Fetch all PRESENT students for this session
     present_records = conn.execute("SELECT roll FROM attendance WHERE session_id = ? AND status = 'PRESENT'", (session_id,)).fetchall()
     present_rolls = {r['roll'] for r in present_records}
+    print(f"[DEBUG] Found {len(present_rolls)} students marked PRESENT in session {session_id}")
     
     # 3. Identify Absentees
     absent_rolls = all_rolls - present_rolls
+    print(f"[DEBUG] Resulting in {len(absent_rolls)} ABSENTEES")
     
     # Prepare data for executemany
-    # FIX: Use same normalized branch matching as above to ensure we find the students
     student_map_rows = conn.execute("SELECT roll, name FROM students WHERE UPPER(TRIM(branch)) = ?", (branch,)).fetchall()
     student_map = {r['roll']: r['name'] for r in student_map_rows}
-    
-    # DEBUG: Log if we found students but map is empty (shouldn't happen with fix)
-    if all_rolls and not student_map:
-        print(f"[CRITICAL DEBUG] Found {len(all_rolls)} rolls but Student Map is empty! Branch: '{branch}'")
     
     absent_data = []
     now_time = datetime.now().strftime("%H:%M:%S")
@@ -1818,11 +1816,13 @@ def finalize_session_logic(session_id):
     try:
         # 4. Insert Absent Records
         if absent_data:
+            print(f"[DEBUG] Inserting {len(absent_data)} absent records for session {session_id}")
             conn.executemany('''INSERT INTO attendance 
                                 (roll, name, subject, branch, date, time, session_id, status) 
                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', absent_data)
                                 
         # 5. Mark Session Finalized
+        print(f"[DEBUG] Marking session {session_id} as finalized in DB")
         conn.execute("UPDATE sessions SET is_finalized = ? WHERE id = ?", (True, session_id))
         
         # 6. Trigger SMS Alerts (ASYNC)
