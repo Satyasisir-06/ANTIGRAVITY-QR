@@ -1,7 +1,7 @@
 let timerInterval;
 const activeQRTimers = {};
 const activeClassTimers = {};
-let serverClockOffset = 0; // Global offset set from admin.html
+// serverClockOffset is set globally in admin.html
 
 async function generateQR() {
     const subject = document.getElementById('subject').value;
@@ -274,7 +274,7 @@ function startClassTimer(sessionId, endTimestamp, subjectName = "Session") {
     if (!display) return;
 
     activeClassTimers[sessionId] = setInterval(() => {
-        const adjustedNow = new Date(Date.now() + serverClockOffset);
+        const adjustedNow = new Date(Date.now() + window.serverClockOffset);
         const diff = endDate - adjustedNow;
 
         if (diff <= 0) {
